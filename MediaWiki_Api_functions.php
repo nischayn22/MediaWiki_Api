@@ -19,8 +19,8 @@ class MediaWikiApi{
       function login($user, $pass){
 
                try {
-                   $token = this->_login($user,$pass);
-                   $token = this->_login($user,$pass, $token);
+                   $token = $this->_login($user,$pass);
+                   $token = $this->_login($user,$pass, $token);
                    return true;
                } catch (Exception $e) {
                    die("FAILED: " . $e->getMessage() . "\n");
@@ -71,7 +71,7 @@ private function _login ( $user, $pass, $token='') {
       	       $url = $this->siteUrl . "/api.php?format=xml&action=query&titles=Main_Page&prop=info|revisions&intoken=edit";
 	       $data = httpRequest($url, $params = '');
 	       $xml = simplexml_load_string($data);
-	       this->editToken =  urlencode( (string)$xml->query->pages->page['edittoken'] );
+	       $this->editToken =  urlencode( (string)$xml->query->pages->page['edittoken'] );
 	       return $this->editToken;
       }
 	
