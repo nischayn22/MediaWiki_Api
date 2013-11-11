@@ -1,28 +1,31 @@
 <?php
 
+global $settings;
+$settings['cookiefile'] = "cookies.tmp";
+
 class MediaWikiApi{
+
       private $editToken;
+
       private $siteUrl;
+
       private $logggedIn = false;
 
-function MediaWikiApi($siteUrl){
-	 $this->siteUrl = $siteUrl;
-}
+      function MediaWikiApi($siteUrl){
+               assert(!empty($siteUrl));
+	       $this->siteUrl = $siteUrl;
+      }
 
-function login($user, $pass){
+      function login($user, $pass){
 
-try {
-	global $settings;
-	$token = this->_login($user,$pass);
-	$token = this->_login($user,$pass, $token);
-	return true;
-} catch (Exception $e) {
-	die("FAILED: " . $e->getMessage() . "\n");
-}
-
-
-}
-
+               try {
+                   $token = this->_login($user,$pass);
+                   $token = this->_login($user,$pass, $token);
+                   return true;
+               } catch (Exception $e) {
+                   die("FAILED: " . $e->getMessage() . "\n");
+               }
+       }
 
 private function _login ( $user, $pass, $token='') {
 
@@ -70,16 +73,20 @@ private function _login ( $user, $pass, $token='') {
 	       $xml = simplexml_load_string($data);
 	       this->editToken =  urlencode( (string)$xml->query->pages->page['edittoken'] );
 	       return $this->editToken;
-	       }
+      }
 	
 function listPageInNamespace($namespace){
-	$url = $this->siteUrl . "/api.php?action=query&list=allpages&format=xml&apnamespace=$namespace&aplimit=10000"; // Hope this limit is enough large that we don't have the trouble to do this again and again using 'continue'
+
+         // Hope this limit is enough large that we don't have the trouble to do this again and again using 'continue'
+
+	$url = $this->siteUrl . "/api.php?action=query&list=allpages&format=xml&apnamespace=$namespace&aplimit=10000"; 
 	$data = httpRequest($url, $params = '');
 	$xml = simplexml_load_string($data);
 	$expr = "/api/query/allpages/p";
 	$result = $xml->xpath($expr);
 	return $result;
 }
+
 function exportPage( $pageName, $content){
 	if (empty($this->editToken))
 	   $this->setEditToken();
@@ -114,7 +121,7 @@ function deleteById( $id ){
 }
 
 
-function httpRequest($url, $post="", $retry = false, $retryNumber = 0, $headers) {
+function httpRequest($url, $post="", $retry = false, $retryNumber = 0, $headers = array()) {
 	global $settings;
 
 	try {
@@ -130,13 +137,14 @@ function httpRequest($url, $post="", $retry = false, $retryNumber = 0, $headers)
 		curl_setopt($ch, CURLOPT_COOKIEFILE, $settings['cookiefile']);
 		curl_setopt($ch, CURLOPT_COOKIEJAR, $settings['cookiefile']);
 		curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);                
 		if (!empty($post)) curl_setopt($ch,CURLOPT_POSTFIELDS,$post);
 		//UNCOMMENT TO DEBUG TO output.tmp
 		//curl_setopt($ch, CURLOPT_VERBOSE, true); // Display communication with server
 		//$fp = fopen("output.tmp", "w");
 		//curl_setopt($ch, CURLOPT_STDERR, $fp); // Display communication with server
-
+                if(!empty($headers))
+                curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 		$xml = curl_exec($ch);
 
 		if (!$xml) {
