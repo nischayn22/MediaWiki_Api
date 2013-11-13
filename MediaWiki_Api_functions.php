@@ -87,7 +87,14 @@ function listPageInNamespace($namespace){
 	return $result;
 }
 
-function exportPage( $pageName, $content){
+function createPage($pageName, $content){
+         $this->editPage($pageName, $content, true);
+}
+
+function editPage( $pageName, $content, $createonly = false, $prepend = false, $append = false){
+        assert(!empty($pageName));
+        assert(!empty($content));
+
 	if (empty($this->editToken))
 	   $this->setEditToken();
 
@@ -95,6 +102,12 @@ function exportPage( $pageName, $content){
 	$site = $this->siteUrl;
 	$content = urlencode( $content );
 	$url = $site . "/api.php?format=xml&action=edit&title=$pageName";
+        if($createonly)
+                $url .= "&createonly=true";
+        if($prepend)
+                $url .= "&prependtext=true";
+        if($append)
+                $url .= "&appendtext=true";
 	$data = httpRequest($url, $params = "format=xml&action=edit&title=$pageName&text=$content&token=$editToken");
 
 	$xml = simplexml_load_string($data);
