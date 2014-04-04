@@ -87,8 +87,37 @@ function listPageInNamespace($namespace){
 	return $result;
 }
 
+function listPageInCategory($category){
+		$url = $settings['privateWiki'] . "/api.php?format=xml&action=query&cmtitle=$category&list=categorymembers&cmlimit=10000";
+		$data = httpRequest($url, $params = '');
+		$xml = simplexml_load_string($data);
+		errorHandler( $xml );
+		//fetch category pages and call them recursively
+		$expr = "/api/query/categorymembers/cm";
+		return $xml->xpath($expr);
+}
+
+
+function getFileUrl($pageName){
+		$url = $this->siteUrl . "/api.php?action=query&titles=$pageName&prop=imageinfo&iiprop=url&format=xml";
+		$data = httpRequest($url, $params = '');
+		$xml = simplexml_load_string($data);
+		$expr = "/api/query/pages/page/imageinfo/ii";
+		$imageInfo = $xml->xpath($expr);
+		$rawFileURL = $imageInfo[0]['url'];
+		return (string) $imageInfo[0]['url'];
+}
+
+function readPage($pageName){
+	$url = $this->siteUrl . "/api.php?format=xml&action=query&titles=$pageName&prop=revisions&rvprop=content";
+	$data = httpRequest($url, $params = '');
+	$xml = simplexml_load_string($data);
+	errorHandler( $xml );
+	return (string)$xml->query->pages->page->revisions->rev;
+}
+
 function createPage($pageName, $content){
-         $this->editPage($pageName, $content, true);
+         return $this->editPage($pageName, $content, true);
 }
 
 function editPage( $pageName, $content, $createonly = false, $prepend = false, $append = false){
