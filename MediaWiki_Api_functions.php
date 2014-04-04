@@ -101,6 +101,7 @@ function editPage( $pageName, $content, $createonly = false, $prepend = false, $
 	$editToken = $this->editToken;
 	$site = $this->siteUrl;
 	$content = urlencode( $content );
+        $pageName = urlencode($pageName);
 	$url = $site . "/api.php?format=xml&action=edit&title=$pageName";
         if($createonly)
                 $url .= "&createonly=true";
@@ -120,6 +121,16 @@ function editPage( $pageName, $content, $createonly = false, $prepend = false, $
 }
 
       
+function deleteByTitle( $title ){
+	 $deleteToken = $this->editToken;
+	$url = $this->siteUrl . "/api.php?action=delete&format=xml";
+	$params = "action=delete&title=$title&token=$deleteToken&reason=Outdated";
+	httpRequest($url, $params);
+	// Nothing to do with response currently
+	// $data = httpRequest($url, $params);
+	// $xml = simplexml_load_string($data);
+}
+
 function deleteById( $id ){
 	 $deleteToken = $this->editToken;
 	$url = $this->siteUrl . "/api.php?action=delete&format=xml";
