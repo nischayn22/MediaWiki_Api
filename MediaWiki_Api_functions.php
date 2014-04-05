@@ -163,7 +163,7 @@ function deleteByTitle( $title ){
 function deleteById( $id ){
 	 $deleteToken = $this->editToken;
 	$url = $this->siteUrl . "/api.php?action=delete&format=xml";
-	$params = "action=delete&pageid=$pageid&token=$deleteToken&reason=Outdated";
+	$params = "action=delete&pageid=$id&token=$deleteToken&reason=Outdated";
 	httpRequest($url, $params);
 	// Nothing to do with response currently
 	// $data = httpRequest($url, $params);
