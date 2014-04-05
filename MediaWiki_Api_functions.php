@@ -88,7 +88,7 @@ function listPageInNamespace($namespace){
 }
 
 function listPageInCategory($category){
-		$url = $settings['privateWiki'] . "/api.php?format=xml&action=query&cmtitle=$category&list=categorymembers&cmlimit=10000";
+		$url = $this->siteUrl . "/api.php?format=xml&action=query&cmtitle=$category&list=categorymembers&cmlimit=10000";
 		$data = httpRequest($url, $params = '');
 		$xml = simplexml_load_string($data);
 		errorHandler( $xml );
