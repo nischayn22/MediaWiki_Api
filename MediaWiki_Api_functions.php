@@ -52,7 +52,7 @@ private function _login ( $user, $pass, $token='') {
 		$result = $xml->xpath($expr);
 
 		if(!count($result)) {
-			throw new Exception("Login failed");
+			throw new Exception("Reason :" . $xml->xpath("/api/login[@result='WrongPass']")[0]->attributes()->result);
 		}
 	} else {
 		$expr = "/api/login[@token]";
