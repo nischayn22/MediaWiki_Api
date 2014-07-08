@@ -153,23 +153,27 @@ class MediaWikiApi {
 
 
     function deleteByTitle($title) {
+        if (empty($this->editToken))
+            $this->setEditToken();
+
         $deleteToken = $this->editToken;
         $url         = $this->siteUrl . "/api.php?action=delete&format=xml";
         $params      = "action=delete&title=$title&token=$deleteToken&reason=Outdated";
-        httpRequest($url, $params);
-        // Nothing to do with response currently
-        // $data = httpRequest($url, $params);
-        // $xml = simplexml_load_string($data);
+        $data = httpRequest($url, $params);
+        $xml = simplexml_load_string($data);
+        errorHandler($xml, $url . $params);
     }
 
     function deleteById($id) {
+        if (empty($this->editToken))
+            $this->setEditToken();
+
         $deleteToken = $this->editToken;
         $url         = $this->siteUrl . "/api.php?action=delete&format=xml";
         $params      = "action=delete&pageid=$id&token=$deleteToken&reason=Outdated";
-        httpRequest($url, $params);
-        // Nothing to do with response currently
-        // $data = httpRequest($url, $params);
-        // $xml = simplexml_load_string($data);
+        $data = httpRequest($url, $params);
+        $xml = simplexml_load_string($data);
+        errorHandler($xml, $url . $params);
     }
 
 
