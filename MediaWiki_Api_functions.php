@@ -87,6 +87,7 @@ class MediaWikiApi {
 	}
 
 	function listPageInCategory( $category ) {
+		$category = urlencode( $category );
 		$url = $this->siteUrl .
 			"/api.php?format=xml&action=query&cmtitle=$category&list=categorymembers&cmlimit=10000";
 		$data = httpRequest( $url, $params = '' );
@@ -108,13 +109,14 @@ class MediaWikiApi {
 		return (string) $imageInfo[0]['url'];
 	}
 
+	/**
+	 *
+	 * @param string $pageName
+	 * @return string Wikitext
+	 */
 	function readPage( $pageName ) {
-		$url = $this->siteUrl .
-			"/api.php?format=xml&action=query&titles=$pageName&prop=revisions&rvprop=content";
-		$data = httpRequest( $url, $params = '' );
-		$xml = simplexml_load_string( $data );
-		errorHandler( $xml );
-		return (string) $xml->query->pages->page->revisions->rev;
+		return file_get_contents( $this->siteUrl . '/index.php?title=' .
+			urlencode( $pageName ) . '&action=raw' );
 	}
 
 	function createPage( $pageName, $content ) {
@@ -166,6 +168,33 @@ class MediaWikiApi {
 		$xml = simplexml_load_string( $data );
 		errorHandler( $xml, $url . $params );
 	}
+
+	/**
+	 * Do an action and post the parameter string
+	 * @todo The other action functions should use this somehow.
+	 *
+	 * @param string $action
+	 * @param string|array $paramString Parameters without a token
+	 * @param string $format
+	 * @return mixed
+	 */
+	function doAction( $action, $paramString, $format = 'xml' ) {
+		if ( is_array( $paramString ) ) {
+			$paramString = http_build_query( $paramString );
+		}
+
+		if ( empty( $this->editToken ) ) {
+			$this->setEditToken();
+		}
+		$actionToken = $this->editToken;
+		$url = $this->siteUrl . "/api.php?action=$action&format=$format";
+		$params = "action=$action&token=$actionToken&" . $paramString;
+		$data = httpRequest( $url, $params );
+		$xml = simplexml_load_string( $data );
+		errorHandler( $xml, $url . $params );
+
+		return $data;
+	}
 }
 
 function httpRequest( $url, $post = "", $retry = false, $retryNumber = 0, $headers = array() ) {
@@ -176,7 +205,7 @@ function httpRequest( $url, $post = "", $retry = false, $retryNumber = 0, $heade
 		//Change the user agent below suitably
 		curl_setopt( $ch, CURLOPT_USERAGENT,
 			'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.9) Gecko/20071025 Firefox/2.0.0.9' );
-		if ( $settings['serverAuth'] ) {
+		if ( isset( $settings['serverAuth'] ) && $settings['serverAuth'] ) {
 			curl_setopt( $ch, CURLOPT_USERPWD, $settings['AuthUsername'] . ":" . $settings['AuthPassword'] );
 		}
 		curl_setopt( $ch, CURLOPT_URL, ($url ) );
