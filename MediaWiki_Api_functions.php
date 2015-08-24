@@ -49,7 +49,7 @@ class MediaWikiApi {
 
 			if ( !count( $result ) ) {
 				throw new Exception( "Reason :" .
-				$xml->xpath( "/api/login[@result='WrongPass']" )[0]->attributes()->result );
+				$xml->xpath( "/api/login[@result='WrongPass']" )->attributes()->result );
 			}
 		} else {
 			$expr = "/api/login[@token]";
