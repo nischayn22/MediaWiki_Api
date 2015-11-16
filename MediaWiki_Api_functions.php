@@ -181,6 +181,7 @@ class MediaWikiApi {
 
 
 function httpRequest($url, $post = "", $retry = false, $retryNumber = 0, $headers = array()) {
+	sleep(3);
     global $settings;
 
     try {
