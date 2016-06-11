@@ -60,7 +60,12 @@ class MediaWikiApi {
             $result = $xml->xpath($expr);
 
             if (!count($result)) {
-                throw new Exception("Login token not found in XML");
+				// For old versions
+				$expr   = "/api/login[@lgtoken]";
+				$result = $xml->xpath($expr);
+				if (!count($result)) {
+					throw new Exception("Login token not found in XML");
+				}
             }
         }
 
