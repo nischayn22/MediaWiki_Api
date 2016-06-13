@@ -1,4 +1,6 @@
 <?php
+// ini_set('display_errors', 1); 
+// error_reporting(E_ALL);
 
 global $settings;
 $settings['cookiefile'] = "cookies.tmp";
@@ -78,7 +80,7 @@ class MediaWikiApi {
         $data            = httpRequest($url, $params = '');
         $xml             = simplexml_load_string($data);
         $this->editToken = urlencode((string) $xml->query->pages->page['edittoken']);
-	errorHandler($xml);
+		errorHandler($xml);
         return $this->editToken;
     }
 
@@ -115,8 +117,12 @@ class MediaWikiApi {
         return (string) $imageInfo[0]['url'];
     }
 
-    function readPage($pageName) {
+    function readPage($pageName, $section = false) {
         $url  = $this->siteUrl . "/api.php?format=xml&action=query&titles=$pageName&prop=revisions&rvprop=content";
+		if ($section) {
+			$section   = urlencode($section);
+			$url .= "&rvsection=$section";
+		}
         $data = httpRequest($url, $params = '');
         $xml  = simplexml_load_string($data);
         errorHandler($xml);
@@ -127,7 +133,7 @@ class MediaWikiApi {
         return $this->editPage($pageName, $content, true);
     }
 
-    function editPage($pageName, $content, $createonly = false, $prepend = false, $append = false) {
+    function editPage($pageName, $content, $createonly = false, $prepend = false, $append = false, $summary = false, $section = false, $sectiontitle = false) {
         assert(!empty($pageName));
         assert(!empty($content));
 
@@ -138,14 +144,30 @@ class MediaWikiApi {
         $site      = $this->siteUrl;
         $content   = urlencode($content);
         $pageName  = urlencode($pageName);
-        $url       = $site . "/api.php?format=xml&action=edit&title=$pageName";
+        $url  = $site . "/api.php?format=xml&action=edit&title=$pageName";
+		$url .= "&text=$content";
         if ($createonly)
             $url .= "&createonly=true";
         if ($prepend)
-            $url .= "&prependtext=true";
+            $url .= "&prependtext=$content";
         if ($append)
-            $url .= "&appendtext=true";
-        $data = httpRequest($url, $params = "format=xml&action=edit&title=$pageName&text=$content&token=$editToken");
+            $url .= "&appendtext=$content";
+        if ($summary) {
+			$summary  = urlencode($summary);
+            $url .= "&summary=$summary";
+		}
+        if ($sectiontitle) {
+			$sectiontitle  = urlencode($sectiontitle);
+            $url .= "&sectiontitle=$sectiontitle";
+            $url .= "&section=new";
+		} else if ($section !== false) {
+			$section  = urlencode($section);
+            $url .= "&section=$section";
+		}
+
+		// var_dump($url);
+		// die();
+        $data = httpRequest($url, $params = "format=xml&action=edit&title=$pageName&token=$editToken");
 
         $xml = simplexml_load_string($data);
         errorHandler($xml, $url . $params);
@@ -181,6 +203,50 @@ class MediaWikiApi {
         errorHandler($xml, $url . $params);
     }
 
+
+	function getSections($pageName) {
+        $url  = $this->siteUrl . "/api.php?format=xml&action=parse&page=$pageName&prop=sections";
+        $data = httpRequest($url, $params = '');
+        $xml  = simplexml_load_string($data);
+        $expr       = "/api/parse/sections/s";
+		$section_data = $xml->xpath($expr);
+		$result = array();
+		foreach($section_data as $data) {
+			$result[(string)$data['line']]  = array( "number" => (string)$data['number'], "level" => (string)$data['level']);
+		}
+		return $result;
+    }
+
+	function getSectionHeader($sectionName, $sectionLevel) {
+		return str_repeat("=", $sectionLevel) . $sectionName . str_repeat("=", $sectionLevel);
+	}
+
+	function insertBeginSection($pageName, $sectionName, $text, $changeReason = '') {
+		$sections = $this->getSections($pageName);
+		$section_header = $this->getSectionHeader($sectionName, $sections[$sectionName]['level']);
+		$content = $this->readPage($pageName, $sections[$sectionName]['number']);
+		$content = str_replace($section_header, '', $content);
+		$text .= $content;
+		$text = $section_header . "\n" . $text;
+		return $this->editPage($pageName, $text, false, false, false, $changeReason, $sections[$sectionName]['number']);
+	}
+
+	function insertEndSection($pageName, $sectionName, $text, $changeReason = '') {
+		$sections = $this->getSections($pageName);
+		$section_header = $this->getSectionHeader($sectionName, $sections[$sectionName]['level']);
+		$content = $this->readPage($pageName, $sections[$sectionName]['number']);
+		$content = str_replace($section_header, '', $content);
+		$text = $content . $text;
+		$text = $section_header . "\n" . $text;
+		return $this->editPage($pageName, $text, false, false, false, $changeReason, $sections[$sectionName]['number']);
+	}
+
+	function replaceSection($pageName, $sectionName, $text, $changeReason = '') {
+		$sections = $this->getSections($pageName);
+		$section_header = $this->getSectionHeader($sectionName, $sections[$sectionName]['level']);
+		$text = $section_header . "\n" . $text;
+		return $this->editPage($pageName, $text, false, false, false, $changeReason, $sections[$sectionName]['number']);
+	}
 
 }
 
