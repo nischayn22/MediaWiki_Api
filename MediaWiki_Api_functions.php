@@ -165,8 +165,6 @@ class MediaWikiApi {
             $url .= "&section=$section";
 		}
 
-		// var_dump($url);
-		// die();
         $data = httpRequest($url, $params = "format=xml&action=edit&title=$pageName&token=$editToken");
 
         $xml = simplexml_load_string($data);
@@ -223,8 +221,11 @@ class MediaWikiApi {
 
 	function insertBeginSection($pageName, $sectionName, $text, $changeReason = '') {
 		$sections = $this->getSections($pageName);
-		$section_header = $this->getSectionHeader($sectionName, $sections[$sectionName]['level']);
+		if (!array_key_exists($sectionName, $sections)) {
+			return false;
+		}
 		$content = $this->readPage($pageName, $sections[$sectionName]['number']);
+		$section_header = $this->getSectionHeader($sectionName, $sections[$sectionName]['level']);
 		$content = str_replace($section_header, '', $content);
 		$text .= $content;
 		$text = $section_header . "\n" . $text;
@@ -233,15 +234,35 @@ class MediaWikiApi {
 
 	function insertEndSection($pageName, $sectionName, $text, $changeReason = '') {
 		$sections = $this->getSections($pageName);
-		$section_header = $this->getSectionHeader($sectionName, $sections[$sectionName]['level']);
+		if (!array_key_exists($sectionName, $sections)) {
+			return false;
+		}
 		$content = $this->readPage($pageName, $sections[$sectionName]['number']);
+		$section_header = $this->getSectionHeader($sectionName, $sections[$sectionName]['level']);
 		$content = str_replace($section_header, '', $content);
 		$text = $content . $text;
 		$text = $section_header . "\n" . $text;
 		return $this->editPage($pageName, $text, false, false, false, $changeReason, $sections[$sectionName]['number']);
 	}
 
+	function insertAfterSection($pageName, $sectionName, $text, $changeReason = '', $afterStr) {
+		$sections = $this->getSections($pageName);
+		if (!array_key_exists($sectionName, $sections)) {
+			return false;
+		}
+		$content = $this->readPage($pageName, $sections[$sectionName]['number']);
+		$section_header = $this->getSectionHeader($sectionName, $sections[$sectionName]['level']);
+		$content = str_replace($section_header, '', $content);
+		$parts = explode($afterStr, $content);
+		$text = $parts[0] . $afterStr . $text . $parts[1] . $parts[2];
+		$text = $section_header . "\n" . $text;
+		return $this->editPage($pageName, $text, false, false, false, $changeReason, $sections[$sectionName]['number']);
+	}
+
 	function replaceSection($pageName, $sectionName, $text, $changeReason = '') {
+		if (!array_key_exists($sectionName, $sections)) {
+			return false;
+		}
 		$sections = $this->getSections($pageName);
 		$section_header = $this->getSectionHeader($sectionName, $sections[$sectionName]['level']);
 		$text = $section_header . "\n" . $text;
@@ -345,4 +366,11 @@ function errorHandler($xml, $url = '') {
         }
       }
     }
+}
+function dieq() {
+        foreach ( func_get_args() as $arg ) {
+                var_dump( $arg );
+                echo "\n";
+        }
+        die('.');
 }
