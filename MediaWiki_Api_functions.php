@@ -43,8 +43,8 @@ class MediaWikiApi {
         }
 
         $data = httpRequest($url, $params);
-
-	print($data);
+	//UNCOMMENT TO DEBUG TO STDOUT
+	//print($data);
 
         if (empty($data)) {
             throw new Exception("No data received from server. Check that API is enabled.");
@@ -72,6 +72,7 @@ class MediaWikiApi {
 				}
             }
         }
+	//UNCOMMENT TO DEBUG TO STDOUT
 	//print($result[0]->attributes()->token);
         return urlencode($result[0]->attributes()->token);
     }
@@ -79,15 +80,14 @@ class MediaWikiApi {
 
     function setEditToken() {
         $url             = $this->siteUrl . "/api.php?format=xml&action=query&meta=tokens";
-//action=query&titles=Main_Page&prop=info|revisions&intoken=edit";
         $data            = httpRequest($url, $params = '');
         $xml             = simplexml_load_string($data);
 	$expr   = "/api/query/tokens[@csrftoken]";
 	$result = $xml->xpath($expr);
 	$this->editToken = urlencode($result[0]->attributes()->csrftoken);
-	print($this->editToken);
-	//$this->editToken = urlencode((string) $xml->query->pages->page['edittoken']);
-		errorHandler($xml);
+	//UNCOMMENT TO DEBUG TO STDOUT
+	//print($this->editToken);
+	errorHandler($xml);
         return $this->editToken;
     }
 
@@ -136,6 +136,7 @@ class MediaWikiApi {
         $data = httpRequest($url, $params = '');
         $xml  = simplexml_load_string($data);
         errorHandler($xml);
+	print((string) $xml->query->pages->page->revisions->rev);
         return (string) $xml->query->pages->page->revisions->rev;
     }
 
@@ -305,9 +306,9 @@ function httpRequest($url, $post = "", $retry = false, $retryNumber = 0, $header
         if (!empty($post))
             curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
         //UNCOMMENT TO DEBUG TO output.tmp
-        curl_setopt($ch, CURLOPT_VERBOSE, true); // Display communication with server
-        $fp = fopen("output.tmp", "w");
-        curl_setopt($ch, CURLOPT_STDERR, $fp); // Display communication with server
+        //curl_setopt($ch, CURLOPT_VERBOSE, true); // Display communication with server
+        //$fp = fopen("output.tmp", "w");
+        //curl_setopt($ch, CURLOPT_STDERR, $fp); // Display communication with server
         if (!empty($headers))
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         $xml = curl_exec($ch);
