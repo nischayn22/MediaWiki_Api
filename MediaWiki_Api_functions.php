@@ -104,19 +104,30 @@ class MediaWikiApi {
     }
 
     function listPageInCategory($category) {
-	$category = urlencode( $category );
-        $url  = $this->siteUrl . "/api.php?format=xml&action=query&cmtitle=$category&list=categorymembers&cmlimit=10000";
-        $data = httpRequest($url, $params = '');
-        $xml  = simplexml_load_string($data);
+        $category   = urlencode( $category );
+        $url        = $this->siteUrl . "/api.php?format=xml&action=query&cmtitle=$category&list=categorymembers&cmlimit=10000";
+        $data       = httpRequest($url, $params = '');
+        $xml        = simplexml_load_string($data);
         errorHandler($xml);
         //fetch category pages and call them recursively
         $expr = "/api/query/categorymembers/cm";
         return $xml->xpath($expr);
     }
 
+    function listImagesOnPage($pageName) {
+        // Returns a list with all image pages this page links to
+        $pageName   = urlencode($pageName);
+        $url        = $this->siteUrl . "/api.php?format=xml&action=query&prop=images&titles=$pageName&imlimit=1000";
+        $data       = httpRequest( $url );
+        $xml        = simplexml_load_string($data);
+        errorHandler($xml);
+        //fetch image Links and copy them as well
+        $expr = "/api/query/pages/page/images/im";
+        return $xml->xpath($expr);
+    }
 
     function getFileUrl($pageName) {
-	$pageName = urlencode( $pageName );
+        $pageName   = urlencode( $pageName );
         $url        = $this->siteUrl . "/api.php?action=query&titles=$pageName&prop=imageinfo&iiprop=url&format=xml";
         $data       = httpRequest($url, $params = '');
         $xml        = simplexml_load_string($data);
@@ -134,9 +145,12 @@ class MediaWikiApi {
 			$url .= "&rvsection=$section";
 		}
         $data = httpRequest($url, $params = '');
+
+        //UNCOMMENT TO DEBUG TO STDOUT
+        //print($data);
+
         $xml  = simplexml_load_string($data);
         errorHandler($xml);
-	print((string) $xml->query->pages->page->revisions->rev);
         return (string) $xml->query->pages->page->revisions->rev;
     }
 
@@ -178,7 +192,8 @@ class MediaWikiApi {
 
         $data = httpRequest($url, $params = "format=xml&action=edit&title=$pageName&token=$editToken");
 
-	print($data);
+	//UNCOMMENT TO DEBUG TO STDOUT
+	//print($data);
 
         $xml = simplexml_load_string($data);
         errorHandler($xml, $url . $params);
