@@ -1,6 +1,6 @@
 <?php
-// ini_set('display_errors', 1); 
-// error_reporting(E_ALL);
+ ini_set('display_errors', 1); 
+ error_reporting(E_ALL);
 
 global $settings;
 $settings['cookiefile'] = "cookies.tmp";
@@ -41,8 +41,12 @@ class MediaWikiApi {
         if (!empty($token)) {
             $params .= "&lgtoken=$token";
         }
-
+        //UNCOMMENT TO DEBUG TO STDOUT
+        //print($params);
         $data = httpRequest($url, $params);
+
+	//UNCOMMENT TO DEBUG TO STDOUT
+	//print($data);
 
         if (empty($data)) {
             throw new Exception("No data received from server. Check that API is enabled.");
@@ -70,17 +74,27 @@ class MediaWikiApi {
 				}
             }
         }
-
-        return $result[0]->attributes()->token;
+	//UNCOMMENT TO DEBUG TO STDOUT
+	//print($result[0]->attributes()->token);
+        return urlencode($result[0]->attributes()->token);
     }
 
+    function logout() {
+        $url = $this->siteUrl . "/api.php?action=logout";
+        $params = "";
+        $data = httpRequest($url, $params);
+    }
 
     function setEditToken() {
-        $url             = $this->siteUrl . "/api.php?format=xml&action=query&titles=Main_Page&prop=info|revisions&intoken=edit";
-        $data            = httpRequest($url, $params = '');
-        $xml             = simplexml_load_string($data);
-        $this->editToken = urlencode((string) $xml->query->pages->page['edittoken']);
-		errorHandler($xml);
+        $url    = $this->siteUrl . "/api.php?format=xml&action=query&meta=tokens&assert=user";
+        $data   = httpRequest($url, $params = '');
+        $xml    = simplexml_load_string($data);
+        $expr   = "/api/query/tokens[@csrftoken]";
+        $result = $xml->xpath($expr);
+        $this->editToken = urlencode($result[0]->attributes()->csrftoken);
+	//UNCOMMENT TO DEBUG TO STDOUT
+	//print($this->editToken);
+        errorHandler($xml);
         return $this->editToken;
     }
 
@@ -97,17 +111,30 @@ class MediaWikiApi {
     }
 
     function listPageInCategory($category) {
-        $url  = $this->siteUrl . "/api.php?format=xml&action=query&cmtitle=$category&list=categorymembers&cmlimit=10000";
-        $data = httpRequest($url, $params = '');
-        $xml  = simplexml_load_string($data);
+        $category = urlencode( $category );
+        $url      = $this->siteUrl . "/api.php?format=xml&action=query&cmtitle=$category&list=categorymembers&cmlimit=10000";
+        $data     = httpRequest($url, $params = '');
+        $xml      = simplexml_load_string($data);
         errorHandler($xml);
         //fetch category pages and call them recursively
         $expr = "/api/query/categorymembers/cm";
         return $xml->xpath($expr);
     }
 
+    function listImagesOnPage($pageName) {
+        // Returns a list with all image pages this page links to
+        $pageName   = urlencode($pageName);
+        $url        = $this->siteUrl . "/api.php?format=xml&action=query&prop=images&titles=$pageName&imlimit=1000";
+        $data       = httpRequest( $url );
+        $xml        = simplexml_load_string($data);
+        errorHandler($xml);
+        //fetch image Links and copy them as well
+        $expr = "/api/query/pages/page/images/im";
+        return $xml->xpath($expr);
+    }
 
     function getFileUrl($pageName) {
+        $pageName   = urlencode( $pageName );
         $url        = $this->siteUrl . "/api.php?action=query&titles=$pageName&prop=imageinfo&iiprop=url&format=xml";
         $data       = httpRequest($url, $params = '');
         $xml        = simplexml_load_string($data);
@@ -118,12 +145,20 @@ class MediaWikiApi {
     }
 
     function readPage($pageName, $section = false) {
+	$pageName = urlencode( $pageName );
         $url  = $this->siteUrl . "/api.php?format=xml&action=query&titles=$pageName&prop=revisions&rvprop=content";
 		if ($section) {
 			$section   = urlencode($section);
 			$url .= "&rvsection=$section";
 		}
+        //UNCOMMENT TO DEBUG TO STDOUT
+        //print($url);
+
         $data = httpRequest($url, $params = '');
+
+        //UNCOMMENT TO DEBUG TO STDOUT
+        //print($data);
+
         $xml  = simplexml_load_string($data);
         errorHandler($xml);
         return (string) $xml->query->pages->page->revisions->rev;
@@ -164,8 +199,13 @@ class MediaWikiApi {
 			$section  = urlencode($section);
             $url .= "&section=$section";
 		}
+        //UNCOMMENT TO DEBUG TO STDOUT
+        //print($url);
 
-        $data = httpRequest($url, $params = "format=xml&action=edit&title=$pageName&token=$editToken");
+        $data = httpRequest($url, $params = "format=xml&action=edit&title=$pageName&token=$editToken&assert=user");
+
+	//UNCOMMENT TO DEBUG TO STDOUT
+	//print($data);
 
         $xml = simplexml_load_string($data);
         errorHandler($xml, $url . $params);
@@ -273,7 +313,7 @@ class MediaWikiApi {
 
 
 function httpRequest($url, $post = "", $retry = false, $retryNumber = 0, $headers = array()) {
-	sleep(3);
+    sleep(3);
     global $settings;
 
     try {
@@ -288,6 +328,7 @@ function httpRequest($url, $post = "", $retry = false, $retryNumber = 0, $header
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_COOKIEFILE, $settings['cookiefile']);
         curl_setopt($ch, CURLOPT_COOKIEJAR, $settings['cookiefile']);
+        curl_setopt($ch, CURLOPT_COOKIESESSION, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         if (!empty($post))
@@ -305,6 +346,8 @@ function httpRequest($url, $post = "", $retry = false, $retryNumber = 0, $header
         }
 
         curl_close($ch);
+        //UNCOMMENT TO DEBUG TO output.tmp
+        //fclose($fp);
     }
     catch (Exception $e) {
         echo 'Caught exception: ', $e->getMessage(), "\n";
