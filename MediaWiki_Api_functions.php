@@ -168,7 +168,7 @@ class MediaWikiApi {
         return $this->editPage($pageName, $content, true);
     }
 
-    function editPage($pageName, $content, $createonly = false, $prepend = false, $append = false, $summary = false, $section = false, $sectiontitle = false) {
+    function editPage($pageName, $content, $createonly = false, $prepend = false, $append = false, $summary = false, $section = false, $sectiontitle = false, $retryNumber = 0) {
         assert(!empty($pageName));
         assert(!empty($content));
 
@@ -177,43 +177,46 @@ class MediaWikiApi {
 
         $editToken = $this->editToken;
         $site      = $this->siteUrl;
-        $content   = urlencode($content);
-        $pageName  = urlencode($pageName);
-        $url  = $site . "/api.php?format=xml&action=edit&title=$pageName";
-		$url .= "&text=$content";
+        $url  = $site . "/api.php?format=xml&action=edit&title=" . urlencode($pageName);
+		$url .= "&text=" . urlencode($content);
         if ($createonly)
             $url .= "&createonly=true";
         if ($prepend)
-            $url .= "&prependtext=$content";
+            $url .= "&prependtext=" . urlencode($content);
         if ($append)
-            $url .= "&appendtext=$content";
+            $url .= "&appendtext=" . urlencode($content);
         if ($summary) {
-			$summary  = urlencode($summary);
-            $url .= "&summary=$summary";
+            $url .= "&summary=" . urlencode($summary);
 		}
         if ($sectiontitle) {
-			$sectiontitle  = urlencode($sectiontitle);
-            $url .= "&sectiontitle=$sectiontitle";
+            $url .= "&sectiontitle=" . urlencode($sectiontitle);
             $url .= "&section=new";
 		} else if ($section !== false) {
-			$section  = urlencode($section);
-            $url .= "&section=$section";
+            $url .= "&section=" . urlencode($section);
 		}
         //UNCOMMENT TO DEBUG TO STDOUT
         //print($url);
 
-        $data = httpRequest($url, $params = "format=xml&action=edit&title=$pageName&token=$editToken&assert=user");
+        $data = httpRequest($url, $params = "format=xml&action=edit&title=". urlencode($pageName) ."&token=$editToken&assert=user");
 
 	//UNCOMMENT TO DEBUG TO STDOUT
 	//print($data);
 
-        $xml = simplexml_load_string($data);
-        errorHandler($xml, $url . $params);
-
-        if ($data == null)
+		if ($data == null) {
             return null;
-        else
-            return 1;
+		}
+
+        $xml = simplexml_load_string($data);
+        $apiError = errorHandler($xml, $url . $params);
+		if ($apiError) {
+			if (!$retry && $retryNumber < 3) {
+	            echo "Retrying \n";
+				return $this->editPage($pageName, $content, $createonly, $prepend, $append, $summary, $section, $sectiontitle, $retryNumber++);
+			}
+			return null;
+		}
+
+        return 1;
     }
 
 
@@ -353,7 +356,7 @@ function httpRequest($url, $post = "", $retry = false, $retryNumber = 0, $header
         echo 'Caught exception: ', $e->getMessage(), "\n";
         if (!$retry && $retryNumber < 3) {
             echo "Retrying \n";
-            httpRequest($url, $post, true, $retryNumber++);
+            return httpRequest($url, $post, true, $retryNumber++);
         } else {
             echo "Could not perform action after 3 attempts. Skipping now...\n";
             return null;
@@ -394,9 +397,12 @@ function errorHandler($xml, $url = '') {
         foreach ($errors as $error) {
             echo "Error code: " . $error['code'] . " " . $error['info'] . "\n";
         }
-	if ($url != '')
-	   echo "URL: $url \n\n\n";
-    } else if (property_exists($xml, 'warnings')) {
+		if ($url != '') {
+		   echo "URL: $url \n\n\n";
+		}
+		return true;
+    }
+	if (property_exists($xml, 'warnings')) {
       $warnings = is_array($xml->warnings) ? $xml->warnings : array(
            $xml->warnings
       );
@@ -409,6 +415,7 @@ function errorHandler($xml, $url = '') {
         }
       }
     }
+	return false;
 }
 function dieq() {
         foreach ( func_get_args() as $arg ) {
