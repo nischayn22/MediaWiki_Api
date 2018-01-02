@@ -21,7 +21,7 @@ class MediaWikiApi {
     function login($user, $pass) {
 
         try {
-            $token = $this->_login($user, $pass);
+            $token = $this->getToken();
             $token = $this->_login($user, $pass, $token);
             return true;
         }
@@ -29,6 +29,20 @@ class MediaWikiApi {
             die("FAILED: " . $e->getMessage() . "\n");
         }
     }
+
+    private function getToken( $type = 'login' ) {
+        assert(!empty($this->siteUrl));
+        $url = $this->siteUrl . "/api.php?action=query&meta=tokens&type=$type&format=xml";
+        $data = httpRequest($url);
+        if (empty($data)) {
+            throw new Exception("No data received from server. Check that API is enabled.");
+        }
+
+        $xml = simplexml_load_string($data);
+		$expr   = "/api/query/tokens";
+		$result = $xml->xpath($expr);
+		return urlencode($result[0]->attributes()->logintoken);
+	}
 
     private function _login($user, $pass, $token = '') {
 
@@ -41,12 +55,8 @@ class MediaWikiApi {
         if (!empty($token)) {
             $params .= "&lgtoken=$token";
         }
-        //UNCOMMENT TO DEBUG TO STDOUT
-        //print($params);
-        $data = httpRequest($url, $params);
 
-	//UNCOMMENT TO DEBUG TO STDOUT
-	//print($data);
+        $data = httpRequest($url, $params);
 
         if (empty($data)) {
             throw new Exception("No data received from server. Check that API is enabled.");
@@ -59,7 +69,7 @@ class MediaWikiApi {
             $result = $xml->xpath($expr);
 
             if (!count($result)) {
-                throw new Exception("Reason :" . $xml->xpath("/api/login[@result='WrongPass']")[0]->attributes()->result);
+                throw new Exception("Reason :" . $xml->xpath("/api/login")[0]->attributes()->reason);
             }
         } else {
             $expr   = "/api/login[@token]";
@@ -74,8 +84,6 @@ class MediaWikiApi {
 				}
             }
         }
-	//UNCOMMENT TO DEBUG TO STDOUT
-	//print($result[0]->attributes()->token);
         return urlencode($result[0]->attributes()->token);
     }
 
