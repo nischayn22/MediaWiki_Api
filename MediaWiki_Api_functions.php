@@ -13,6 +13,8 @@ class MediaWikiApi {
 
     private $logggedIn = false;
 
+	private $templateData = array();
+
     function MediaWikiApi($siteUrl) {
         assert(!empty($siteUrl));
         $this->siteUrl = $siteUrl;
@@ -106,6 +108,18 @@ class MediaWikiApi {
         return $this->editToken;
     }
 
+    function hasApiAction($action) {
+        $url    = $this->siteUrl . "/api.php?format=xml&action=$action";
+        $data   = httpRequest($url, $params = '');
+        $xml    = simplexml_load_string($data);
+        $expr   = "/api/error";
+        $result = $xml->xpath($expr);
+		if (count($result)) {
+			return false;
+		}
+		return true;
+    }
+
     function listPageInNamespace($namespace) {
 
         // Hope this limit is enough large that we don't have the trouble to do this again and again using 'continue'
@@ -153,7 +167,7 @@ class MediaWikiApi {
     }
 
     function readPage($pageName, $section = false) {
-	$pageName = urlencode( $pageName );
+		$pageName = urlencode( $pageName );
         $url  = $this->siteUrl . "/api.php?format=xml&action=query&titles=$pageName&prop=revisions&rvprop=content";
 		if ($section) {
 			$section   = urlencode($section);
@@ -176,12 +190,77 @@ class MediaWikiApi {
         return $this->editPage($pageName, $content, true);
     }
 
+	function fetchTemplateData( $templateName ) {
+		$arguments = array();
+
+        $url    = $this->siteUrl . "/api.php?format=xml&action=templatedata&titles=Template:$templateName";
+        $data   = httpRequest($url, $params = '');
+        $xml    = simplexml_load_string($data);
+        $expr   = "/api/pages/page/params/param";
+        $result = $xml->xpath($expr);
+		foreach( $result as $argument ) {
+			$arguments[] = (string) $argument->attributes()->key;
+		}
+		$this->templateData[$templateName] = $arguments;
+	}
+
+	function templateValuesFilter($content) {
+		$templateBegin = 0;
+
+		// Find all templates
+		while( ( $templateBegin = strpos( $content, "{{", $templateBegin ) ) !== false ) {
+			$templateEnd = strpos( $content, "}}", $templateBegin ) + 2;
+			$templateParts = explode( '|', substr( $content, $templateBegin + 2, $templateEnd - $templateBegin - 2 ) );
+
+			$templateName = '';
+			$templateArgs = array();
+
+			foreach( $templateParts as $templatePart ) {
+				$templatePart = trim( $templatePart );
+
+				if ( empty( $templateName ) ) {
+					$templateName = $templatePart;
+				} else {
+					$argumentParts = explode( '=', $templatePart );
+					if ( count( $argumentParts ) != 2 ) {
+						break;
+					}
+					$templateArgs[$argumentParts[0]] = $argumentParts[1];
+				}
+			}
+
+			// If valid template filter out data using templatedata
+			if ( count( $templateArgs ) > 0 ) {
+				if ( !array_key_exists( $templateName, $this->templateData ) ) {
+					$this->fetchTemplateData( $templateName );
+				}
+				$templateArgs = array_intersect_key( $templateArgs, array_flip($this->templateData[$templateName]) );
+				$newTemplateContent = implode( PHP_EOL . '|', 
+					array_map(
+						function ( $key, $value ) { return "$key=$value"; },
+						array_keys( $templateArgs ),
+						$templateArgs
+					)
+				);
+				$newTemplateContent = "{{" . $templateName . PHP_EOL . '|' . $newTemplateContent . PHP_EOL . "}}";
+				$content = substr_replace( $content, $newTemplateContent, $templateBegin, $templateEnd - $templateBegin );
+				$templateBegin += strlen( $newTemplateContent );
+			}
+		}
+
+		return $content;
+	}
+
     function editPage($pageName, $content, $createonly = false, $prepend = false, $append = false, $summary = false, $section = false, $sectiontitle = false, $retryNumber = 0) {
         assert(!empty($pageName));
         assert(!empty($content));
 
         if (empty($this->editToken))
             $this->setEditToken();
+
+		if ($this->hasApiAction('templatedata')) {
+			$content = $this->templateValuesFilter($content);
+		}
 
         $editToken = $this->editToken;
         $site      = $this->siteUrl;
