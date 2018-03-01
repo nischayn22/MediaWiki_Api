@@ -210,7 +210,7 @@ class MediaWikiApi {
 		// Find all templates
 		while( ( $templateBegin = strpos( $content, "{{", $templateBegin ) ) !== false ) {
 			$templateEnd = strpos( $content, "}}", $templateBegin ) + 2;
-			$templateParts = explode( '|', substr( $content, $templateBegin + 2, $templateEnd - $templateBegin - 2 ) );
+			$templateParts = explode( '|', substr( $content, $templateBegin + 2, $templateEnd - $templateBegin - 4 ) );
 
 			$templateName = '';
 			$templateArgs = array();
@@ -228,7 +228,6 @@ class MediaWikiApi {
 					$templateArgs[$argumentParts[0]] = $argumentParts[1];
 				}
 			}
-
 			// If valid template filter out data using templatedata
 			if ( count( $templateArgs ) > 0 ) {
 				if ( !array_key_exists( $templateName, $this->templateData ) ) {
@@ -245,6 +244,8 @@ class MediaWikiApi {
 				$newTemplateContent = "{{" . $templateName . PHP_EOL . '|' . $newTemplateContent . PHP_EOL . "}}";
 				$content = substr_replace( $content, $newTemplateContent, $templateBegin, $templateEnd - $templateBegin );
 				$templateBegin += strlen( $newTemplateContent );
+			} else {
+				$templateBegin += $templateEnd;
 			}
 		}
 
