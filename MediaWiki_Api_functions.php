@@ -248,7 +248,6 @@ class MediaWikiApi {
 				$templateBegin += $templateEnd;
 			}
 		}
-
 		return $content;
 	}
 
@@ -411,7 +410,7 @@ function httpRequest($url, $post = "", $retry = false, $retryNumber = 0, $header
         $ch = curl_init();
         //Change the user agent below suitably
         curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.9) Gecko/20071025 Firefox/2.0.0.9');
-        if ($settings['serverAuth']) {
+        if (isset( $settings['serverAuth'] )) {
             curl_setopt($ch, CURLOPT_USERPWD, $settings['AuthUsername'] . ":" . $settings['AuthPassword']);
         }
         curl_setopt($ch, CURLOPT_URL, ($url));
@@ -419,15 +418,16 @@ function httpRequest($url, $post = "", $retry = false, $retryNumber = 0, $header
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_COOKIEFILE, $settings['cookiefile']);
         curl_setopt($ch, CURLOPT_COOKIEJAR, $settings['cookiefile']);
+		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
         curl_setopt($ch, CURLOPT_COOKIESESSION, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         if (!empty($post))
             curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
         //UNCOMMENT TO DEBUG TO output.tmp
-        //curl_setopt($ch, CURLOPT_VERBOSE, true); // Display communication with server
-        //$fp = fopen("output.tmp", "w");
-        //curl_setopt($ch, CURLOPT_STDERR, $fp); // Display communication with server
+        // curl_setopt($ch, CURLOPT_VERBOSE, true); // Display communication with server
+        // $fp = fopen("output.tmp", "w");
+        // curl_setopt($ch, CURLOPT_STDERR, $fp); // Display communication with server
         if (!empty($headers))
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         $xml = curl_exec($ch);
@@ -438,7 +438,7 @@ function httpRequest($url, $post = "", $retry = false, $retryNumber = 0, $header
 
         curl_close($ch);
         //UNCOMMENT TO DEBUG TO output.tmp
-        //fclose($fp);
+        // fclose($fp);
     }
     catch (Exception $e) {
         echo 'Caught exception: ', $e->getMessage(), "\n";
