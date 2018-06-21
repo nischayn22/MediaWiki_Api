@@ -1,6 +1,9 @@
 <?php
- ini_set('display_errors', 1); 
- error_reporting(E_ALL);
+
+namespace Nischayn22;
+
+ini_set('display_errors', 1); 
+error_reporting(E_ALL);
 
 global $settings;
 $settings['cookiefile'] = "cookies.tmp";

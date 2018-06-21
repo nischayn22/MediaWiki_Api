@@ -1,0 +1,22 @@
+{
+    "name": "nischayn22/mediawiki-api",
+	"type": "mediawiki-script",
+	"version": "1.0",
+	"license": "GPL-2.0-or-later",
+	"authors": [
+		{
+			"name": "Nischay Nahata",
+			"email": "nischayn22@gmail.com",
+			"homepage": "http://github.com/nischayn22",
+			"role": "Original author"
+		}
+	],
+	"keywords": [
+		"Api",
+		"Wiki",
+		"MediaWiki"
+	],
+	"autoload": {
+		"psr-4": {"Nischayn22\\": "src/"}
+	}
+}
