@@ -18,7 +18,7 @@ class MediaWikiApi {
 
 	private $templateData = array();
 
-    function MediaWikiApi($siteUrl) {
+    function __construct($siteUrl) {
         assert(!empty($siteUrl));
         $this->siteUrl = $siteUrl;
     }
@@ -27,6 +27,9 @@ class MediaWikiApi {
 
         try {
             $token = $this->getToken();
+			if ( $token == null ) {
+				$token = $this->_login($user, $pass);
+			}
             $token = $this->_login($user, $pass, $token);
             return true;
         }
@@ -38,7 +41,7 @@ class MediaWikiApi {
     private function getToken( $type = 'login' ) {
         assert(!empty($this->siteUrl));
         $url = $this->siteUrl . "/api.php?action=query&meta=tokens&type=$type&format=xml";
-        $data = httpRequest($url);
+        $data = self::httpRequest($url);
         if (empty($data)) {
             throw new Exception("No data received from server. Check that API is enabled.");
         }
@@ -46,6 +49,9 @@ class MediaWikiApi {
         $xml = simplexml_load_string($data);
 		$expr   = "/api/query/tokens";
 		$result = $xml->xpath($expr);
+		if ( empty( $result ) ) {
+			return null;
+		}
 		return urlencode($result[0]->attributes()->logintoken);
 	}
 
@@ -61,7 +67,7 @@ class MediaWikiApi {
             $params .= "&lgtoken=$token";
         }
 
-        $data = httpRequest($url, $params);
+        $data = self::httpRequest($url, $params);
 
         if (empty($data)) {
             throw new Exception("No data received from server. Check that API is enabled.");
@@ -95,25 +101,25 @@ class MediaWikiApi {
     function logout() {
         $url = $this->siteUrl . "/api.php?action=logout";
         $params = "";
-        $data = httpRequest($url, $params);
+        $data = self::httpRequest($url, $params);
     }
 
     function setEditToken() {
         $url    = $this->siteUrl . "/api.php?format=xml&action=query&meta=tokens&assert=user";
-        $data   = httpRequest($url, $params = '');
+        $data   = self::httpRequest($url, $params = '');
         $xml    = simplexml_load_string($data);
         $expr   = "/api/query/tokens[@csrftoken]";
         $result = $xml->xpath($expr);
         $this->editToken = urlencode($result[0]->attributes()->csrftoken);
 	//UNCOMMENT TO DEBUG TO STDOUT
 	//print($this->editToken);
-        errorHandler($xml);
+        self::errorHandler($xml);
         return $this->editToken;
     }
 
     function hasApiAction($action) {
         $url    = $this->siteUrl . "/api.php?format=xml&action=$action";
-        $data   = httpRequest($url, $params = '');
+        $data   = self::httpRequest($url, $params = '');
         $xml    = simplexml_load_string($data);
         $expr   = "/api/error";
         $result = $xml->xpath($expr);
@@ -128,7 +134,7 @@ class MediaWikiApi {
         // Hope this limit is enough large that we don't have the trouble to do this again and again using 'continue'
 
         $url    = $this->siteUrl . "/api.php?action=query&list=allpages&format=xml&apnamespace=$namespace&aplimit=10000";
-        $data   = httpRequest($url, $params = '');
+        $data   = self::httpRequest($url, $params = '');
         $xml    = simplexml_load_string($data);
         $expr   = "/api/query/allpages/p";
         $result = $xml->xpath($expr);
@@ -138,9 +144,9 @@ class MediaWikiApi {
     function listPageInCategory($category) {
         $category = urlencode( $category );
         $url      = $this->siteUrl . "/api.php?format=xml&action=query&cmtitle=$category&list=categorymembers&cmlimit=10000";
-        $data     = httpRequest($url, $params = '');
+        $data     = self::httpRequest($url, $params = '');
         $xml      = simplexml_load_string($data);
-        errorHandler($xml);
+        self::errorHandler($xml);
         //fetch category pages and call them recursively
         $expr = "/api/query/categorymembers/cm";
         return $xml->xpath($expr);
@@ -150,9 +156,9 @@ class MediaWikiApi {
         // Returns a list with all image pages this page links to
         $pageName   = urlencode($pageName);
         $url        = $this->siteUrl . "/api.php?format=xml&action=query&prop=images&titles=$pageName&imlimit=1000";
-        $data       = httpRequest( $url );
+        $data       = self::httpRequest( $url );
         $xml        = simplexml_load_string($data);
-        errorHandler($xml);
+        self::errorHandler($xml);
         //fetch image Links and copy them as well
         $expr = "/api/query/pages/page/images/im";
         return $xml->xpath($expr);
@@ -161,7 +167,7 @@ class MediaWikiApi {
     function getFileUrl($pageName) {
         $pageName   = urlencode( $pageName );
         $url        = $this->siteUrl . "/api.php?action=query&titles=$pageName&prop=imageinfo&iiprop=url&format=xml";
-        $data       = httpRequest($url, $params = '');
+        $data       = self::httpRequest($url, $params = '');
         $xml        = simplexml_load_string($data);
         $expr       = "/api/query/pages/page/imageinfo/ii";
         $imageInfo  = $xml->xpath($expr);
@@ -179,13 +185,13 @@ class MediaWikiApi {
         //UNCOMMENT TO DEBUG TO STDOUT
         //print($url);
 
-        $data = httpRequest($url, $params = '');
+        $data = self::httpRequest($url, $params = '');
 
         //UNCOMMENT TO DEBUG TO STDOUT
         //print($data);
 
         $xml  = simplexml_load_string($data);
-        errorHandler($xml);
+        self::errorHandler($xml);
         return (string) $xml->query->pages->page->revisions->rev;
     }
 
@@ -197,7 +203,7 @@ class MediaWikiApi {
 		$arguments = array();
 
         $url    = $this->siteUrl . "/api.php?format=xml&action=templatedata&titles=Template:$templateName";
-        $data   = httpRequest($url, $params = '');
+        $data   = self::httpRequest($url, $params = '');
         $xml    = simplexml_load_string($data);
         $expr   = "/api/pages/page/params/param";
         $result = $xml->xpath($expr);
@@ -287,7 +293,7 @@ class MediaWikiApi {
         //UNCOMMENT TO DEBUG TO STDOUT
         //print($url);
 
-        $data = httpRequest($url, $params = "format=xml&action=edit&title=". urlencode($pageName) ."&token=$editToken&assert=user");
+        $data = self::httpRequest($url, $params = "format=xml&action=edit&title=". urlencode($pageName) ."&token=$editToken&assert=user");
 
 	//UNCOMMENT TO DEBUG TO STDOUT
 	//print($data);
@@ -297,18 +303,47 @@ class MediaWikiApi {
 		}
 
         $xml = simplexml_load_string($data);
-        $apiError = errorHandler($xml, $url . $params);
+        $apiError = self::errorHandler($xml, $url . $params);
 		if ($apiError) {
-			if (!$retry && $retryNumber < 3) {
-	            echo "Retrying \n";
-				return $this->editPage($pageName, $content, $createonly, $prepend, $append, $summary, $section, $sectiontitle, $retryNumber++);
-			}
 			return null;
 		}
 
         return 1;
     }
 
+	function upload( $filename, $filepath ) {
+        assert(!empty($filename));
+        assert(!empty($filepath));
+
+        if (empty($this->editToken)) {
+            $this->setEditToken();
+		}
+
+        $editToken = $this->editToken;
+        $site      = $this->siteUrl;
+        $url  = $site . "/api.php";
+		$url .= "?action=upload&format=xml";
+
+		if (function_exists('curl_file_create')) { // php 5.5+
+		  $cFile = curl_file_create($filepath);
+		} else { // 
+		  $cFile = '@' . realpath($filepath);
+		}
+
+		$params = array( "token" => urldecode( $editToken ), "ignorewarnings" => 1, "filename" => urlencode($filename), "file" => $cFile );
+        $data = self::httpRequest($url, $params, false, 0, "Content-Type: multipart/form-data");
+		if ($data == null) {
+            return null;
+		}
+
+        $xml = simplexml_load_string($data);
+        $apiError = self::errorHandler($xml, $url);
+		if ($apiError) {
+			return null;
+		}
+
+        return 1;
+	}
 
     function deleteByTitle($title) {
         if (empty($this->editToken))
@@ -317,9 +352,9 @@ class MediaWikiApi {
         $deleteToken = $this->editToken;
         $url         = $this->siteUrl . "/api.php?action=delete&format=xml";
         $params      = "action=delete&title=$title&token=$deleteToken&reason=Outdated";
-        $data = httpRequest($url, $params);
+        $data = self::httpRequest($url, $params);
         $xml = simplexml_load_string($data);
-        errorHandler($xml, $url . $params);
+        self::errorHandler($xml, $url . $params);
     }
 
     function deleteById($id) {
@@ -329,15 +364,15 @@ class MediaWikiApi {
         $deleteToken = $this->editToken;
         $url         = $this->siteUrl . "/api.php?action=delete&format=xml";
         $params      = "action=delete&pageid=$id&token=$deleteToken&reason=Outdated";
-        $data = httpRequest($url, $params);
+        $data = self::httpRequest($url, $params);
         $xml = simplexml_load_string($data);
-        errorHandler($xml, $url . $params);
+        self::errorHandler($xml, $url . $params);
     }
 
 
 	function getSections($pageName) {
         $url  = $this->siteUrl . "/api.php?format=xml&action=parse&page=$pageName&prop=sections";
-        $data = httpRequest($url, $params = '');
+        $data = self::httpRequest($url, $params = '');
         $xml  = simplexml_load_string($data);
         $expr       = "/api/parse/sections/s";
 		$section_data = $xml->xpath($expr);
@@ -402,116 +437,117 @@ class MediaWikiApi {
 		return $this->editPage($pageName, $text, false, false, false, $changeReason, $sections[$sectionName]['number']);
 	}
 
-}
+	public static function httpRequest($url, $post = "", $retry = false, $retryNumber = 0, $headers = array()) {
+		sleep(3);
+		global $settings;
 
+		try {
+			$ch = curl_init();
+			//Change the user agent below suitably
+			curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.9) Gecko/20071025 Firefox/2.0.0.9');
+			if (isset( $settings['serverAuth'] )) {
+				curl_setopt($ch, CURLOPT_USERPWD, $settings['AuthUsername'] . ":" . $settings['AuthPassword']);
+			}
+			curl_setopt($ch, CURLOPT_URL, ($url));
+			curl_setopt($ch, CURLOPT_ENCODING, "UTF-8");
+			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+			curl_setopt($ch, CURLOPT_COOKIEFILE, $settings['cookiefile']);
+			curl_setopt($ch, CURLOPT_COOKIEJAR, $settings['cookiefile']);
+			curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+			curl_setopt($ch, CURLOPT_COOKIESESSION, false);
+			curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+			if (!empty($post)) {
+				curl_setopt($ch, CURLOPT_POST, true);
+				curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
+			}
+			// UNCOMMENT TO DEBUG TO output.tmp
+			curl_setopt($ch, CURLOPT_VERBOSE, true); // Display communication with server
+			$fp = fopen("output.tmp", "w");
+			curl_setopt($ch, CURLOPT_STDERR, $fp); // Display communication with server
+			if (!empty($headers))
+				curl_setopt($ch, CURLOPT_HTTPHEADER, (array)$headers);
+			$xml = curl_exec($ch);
 
-function httpRequest($url, $post = "", $retry = false, $retryNumber = 0, $headers = array()) {
-    sleep(3);
-    global $settings;
+			if (!$xml) {
+				throw new \Exception("Error getting data from server: " . curl_error($ch));
+			}
 
-    try {
-        $ch = curl_init();
-        //Change the user agent below suitably
-        curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.9) Gecko/20071025 Firefox/2.0.0.9');
-        if (isset( $settings['serverAuth'] )) {
-            curl_setopt($ch, CURLOPT_USERPWD, $settings['AuthUsername'] . ":" . $settings['AuthPassword']);
-        }
-        curl_setopt($ch, CURLOPT_URL, ($url));
-        curl_setopt($ch, CURLOPT_ENCODING, "UTF-8");
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_COOKIEFILE, $settings['cookiefile']);
-        curl_setopt($ch, CURLOPT_COOKIEJAR, $settings['cookiefile']);
-		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_COOKIESESSION, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        if (!empty($post))
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
-        //UNCOMMENT TO DEBUG TO output.tmp
-        // curl_setopt($ch, CURLOPT_VERBOSE, true); // Display communication with server
-        // $fp = fopen("output.tmp", "w");
-        // curl_setopt($ch, CURLOPT_STDERR, $fp); // Display communication with server
-        if (!empty($headers))
-            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        $xml = curl_exec($ch);
-
-        if (!$xml) {
-            throw new Exception("Error getting data from server: " . curl_error($ch));
-        }
-
-        curl_close($ch);
-        //UNCOMMENT TO DEBUG TO output.tmp
-        // fclose($fp);
-    }
-    catch (Exception $e) {
-        echo 'Caught exception: ', $e->getMessage(), "\n";
-        if (!$retry && $retryNumber < 3) {
-            echo "Retrying \n";
-            return httpRequest($url, $post, true, $retryNumber++);
-        } else {
-            echo "Could not perform action after 3 attempts. Skipping now...\n";
-            return null;
-        }
-    }
-    return $xml;
-}
-
-function download($url, $file_target) {
-    global $settings;
-    $fp = fopen($file_target, 'w+'); //This is the file where we save the information
-    $ch = curl_init(str_replace(" ", "%20", $url)); //Here is the file we are downloading, replace spaces with %20
-    if ($settings['serverAuth']) {
-        curl_setopt($ch, CURLOPT_USERPWD, $settings['AuthUsername'] . ":" . $settings['AuthPassword']);
-    }
-    curl_setopt($ch, CURLOPT_URL, ($url));
-    //	curl_setopt( $ch, CURLOPT_ENCODING, "UTF-8" );
-    //	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_COOKIEFILE, $settings['cookiefile']);
-    curl_setopt($ch, CURLOPT_COOKIEJAR, $settings['cookiefile']);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 50);
-    curl_setopt($ch, CURLOPT_FILE, $fp); // write curl response to file
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-    $xml = curl_exec($ch); // get curl response
-    curl_close($ch);
-    fclose($fp);
-    return $xml;
-}
-
-
-function errorHandler($xml, $url = '') {
-    if (property_exists($xml, 'error')) {
-        $errors = is_array($xml->error) ? $xml->error : array(
-            $xml->error
-        );
-        foreach ($errors as $error) {
-            echo "Error code: " . $error['code'] . " " . $error['info'] . "\n";
-        }
-		if ($url != '') {
-		   echo "URL: $url \n\n\n";
+			curl_close($ch);
+			//UNCOMMENT TO DEBUG TO output.tmp
+			fclose($fp);
 		}
-		return true;
-    }
-	if (property_exists($xml, 'warnings')) {
-      $warnings = is_array($xml->warnings) ? $xml->warnings : array(
-           $xml->warnings
-      );
-      foreach ($warnings as $warning) {
-        if (property_exists($warning, 'info')) {
-          $infos = (array)$warning->info;
-          foreach($infos as $info)
-            if (!empty($info))
-            echo "Warning: " . $info . "\n";
-        }
-      }
-    }
-	return false;
-}
-function dieq() {
-        foreach ( func_get_args() as $arg ) {
-                var_dump( $arg );
-                echo "\n";
-        }
-        die('.');
+		catch (Exception $e) {
+			echo 'Caught exception: ', $e->getMessage(), "\n";
+			if (!$retry && $retryNumber < 3) {
+				echo "Retrying \n";
+				return httpRequest($url, $post, true, $retryNumber++);
+			} else {
+				echo "Could not perform action after 3 attempts. Skipping now...\n";
+				return null;
+			}
+		}
+		return $xml;
+	}
+
+	public static function download($url, $file_target) {
+		global $settings;
+		$fp = fopen($file_target, 'w+'); //This is the file where we save the information
+		$ch = curl_init(str_replace(" ", "%20", $url)); //Here is the file we are downloading, replace spaces with %20
+		if ($settings['serverAuth']) {
+			curl_setopt($ch, CURLOPT_USERPWD, $settings['AuthUsername'] . ":" . $settings['AuthPassword']);
+		}
+		curl_setopt($ch, CURLOPT_URL, ($url));
+		//	curl_setopt( $ch, CURLOPT_ENCODING, "UTF-8" );
+		//	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_COOKIEFILE, $settings['cookiefile']);
+		curl_setopt($ch, CURLOPT_COOKIEJAR, $settings['cookiefile']);
+		curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+		curl_setopt($ch, CURLOPT_TIMEOUT, 50);
+		curl_setopt($ch, CURLOPT_FILE, $fp); // write curl response to file
+		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+		$xml = curl_exec($ch); // get curl response
+		curl_close($ch);
+		fclose($fp);
+		return $xml;
+	}
+
+
+	public static function errorHandler($xml, $url = '') {
+		if (property_exists($xml, 'error')) {
+			$errors = is_array($xml->error) ? $xml->error : array(
+				$xml->error
+			);
+			foreach ($errors as $error) {
+				echo "Error code: " . $error['code'] . " " . $error['info'] . "\n";
+			}
+			if ($url != '') {
+			   echo "URL: $url \n\n\n";
+			}
+			return true;
+		}
+		if (property_exists($xml, 'warnings')) {
+		  $warnings = is_array($xml->warnings) ? $xml->warnings : array(
+			   $xml->warnings
+		  );
+		  foreach ($warnings as $warning) {
+			if (property_exists($warning, 'info')) {
+			  $infos = (array)$warning->info;
+			  foreach($infos as $info)
+				if (!empty($info))
+				echo "Warning: " . $info . "\n";
+			}
+		  }
+		}
+		return false;
+	}
+
+	public static function dieq() {
+			foreach ( func_get_args() as $arg ) {
+					var_dump( $arg );
+					echo "\n";
+			}
+			die('.');
+	}
 }
