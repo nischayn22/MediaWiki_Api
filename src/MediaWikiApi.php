@@ -462,9 +462,9 @@ class MediaWikiApi {
 				curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
 			}
 			// UNCOMMENT TO DEBUG TO output.tmp
-			curl_setopt($ch, CURLOPT_VERBOSE, true); // Display communication with server
-			$fp = fopen("output.tmp", "w");
-			curl_setopt($ch, CURLOPT_STDERR, $fp); // Display communication with server
+			// curl_setopt($ch, CURLOPT_VERBOSE, true); // Display communication with server
+			// $fp = fopen("output.tmp", "w");
+			// curl_setopt($ch, CURLOPT_STDERR, $fp); // Display communication with server
 			if (!empty($headers))
 				curl_setopt($ch, CURLOPT_HTTPHEADER, (array)$headers);
 			$xml = curl_exec($ch);
@@ -475,7 +475,7 @@ class MediaWikiApi {
 
 			curl_close($ch);
 			//UNCOMMENT TO DEBUG TO output.tmp
-			fclose($fp);
+			// fclose($fp);
 		}
 		catch (Exception $e) {
 			echo 'Caught exception: ', $e->getMessage(), "\n";
