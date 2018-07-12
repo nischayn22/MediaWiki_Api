@@ -9,14 +9,19 @@ global $settings;
 $settings['cookiefile'] = "cookies.tmp";
 
 use Google\Cloud\Translate\TranslateClient;
+use Exception;
 
 class MediaWikiApi {
 
     private $editToken;
 
+	private $createAccountToken;
+
     private $siteUrl;
 
     private $logggedIn = false;
+
+	private $last_error = "";
 
 	private $templateData = array();
 
@@ -32,6 +37,39 @@ class MediaWikiApi {
 	function setTranslateSettings( $googleTranslateProjectId, $translateTo ) {
 		$this->googleTranslateProjectId = $googleTranslateProjectId;
 		$this->translateTo = $translateTo;
+	}
+
+	function createAccount( $username, $useremail, $password, &$api_error = '' ) {
+        if ( empty( $this->createAccountToken ) ) {
+            $this->setCreateAccountToken();
+		}
+        assert( !empty( $this->siteUrl ) );
+
+        $url = $this->siteUrl . "/api.php?action=createaccount&format=xml";
+
+		$params = array( "createtoken" => $this->createAccountToken, "username" => $username, "realname" => $username, "email" => $useremail, "password" => $password, "retype" => $password, "reason" => "Auto Creation", "createreturnurl" => $this->siteUrl );
+
+        $data = self::httpRequest( $url, $params );
+
+		if ($data == null) {
+            return null;
+		}
+
+        $xml = simplexml_load_string( $data );
+        $apiError = self::errorHandler( $xml, $url );
+		if ( $apiError ) {
+			return null;
+		}
+		if ( ( (array)$xml->createaccount[0]['status'][0] )[0] == "PASS" ){
+			return 1;
+		} else {
+			$this->last_error = ( (array)$xml->createaccount[0]['messagecode'][0] )[0];
+			return 0;
+		}
+	}
+
+	function getLastError() {
+		return $this->last_error;
 	}
 
     function login($user, $pass) {
@@ -113,6 +151,17 @@ class MediaWikiApi {
         $url = $this->siteUrl . "/api.php?action=logout";
         $params = "";
         $data = self::httpRequest($url, $params);
+    }
+
+    function setCreateAccountToken() {
+        $url    = $this->siteUrl . "/api.php?format=xml&action=query&meta=tokens&type=createaccount";
+        $data   = self::httpRequest($url, $params = '');
+        $xml    = simplexml_load_string($data);
+		$expr   = "/api/query/tokens";
+		$result = $xml->xpath($expr);
+        $this->createAccountToken = $result[0]->attributes()->createaccounttoken;
+        self::errorHandler($xml);
+        return $this->createAccountToken;
     }
 
     function setEditToken() {
@@ -883,7 +932,7 @@ class MediaWikiApi {
 			curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
 			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 			if (!empty($post)) {
-				curl_setopt($ch, CURLOPT_POST, true);
+//				curl_setopt($ch, CURLOPT_POST, true);
 				curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
 			}
 			// UNCOMMENT TO DEBUG TO output.tmp
@@ -893,7 +942,6 @@ class MediaWikiApi {
 			if (!empty($headers))
 				curl_setopt($ch, CURLOPT_HTTPHEADER, (array)$headers);
 			$xml = curl_exec($ch);
-
 			if (!$xml) {
 				throw new \Exception("Error getting data from server: " . curl_error($ch));
 			}
@@ -937,7 +985,6 @@ class MediaWikiApi {
 		fclose($fp);
 		return $xml;
 	}
-
 
 	public static function errorHandler($xml, $url = '') {
 		if (property_exists($xml, 'error')) {
