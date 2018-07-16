@@ -39,7 +39,7 @@ class MediaWikiApi {
 		$this->translateTo = $translateTo;
 	}
 
-	function createAccount( $username, $useremail, $password, &$api_error = '' ) {
+	function createAccount( $username, $password, $useremail = '', $realname = '', &$api_error = '' ) {
         if ( empty( $this->createAccountToken ) ) {
             $this->setCreateAccountToken();
 		}
@@ -47,7 +47,7 @@ class MediaWikiApi {
 
         $url = $this->siteUrl . "/api.php?action=createaccount&format=xml";
 
-		$params = array( "createtoken" => $this->createAccountToken, "username" => $username, "realname" => $username, "email" => $useremail, "password" => $password, "retype" => $password, "reason" => "Auto Creation", "createreturnurl" => $this->siteUrl );
+		$params = array( "createtoken" => $this->createAccountToken, "username" => $username, "realname" => $realname, "email" => $useremail, "password" => $password, "retype" => $password, "reason" => "Auto Creation", "createreturnurl" => $this->siteUrl );
 
         $data = self::httpRequest( $url, $params );
 
