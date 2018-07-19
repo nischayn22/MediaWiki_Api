@@ -63,7 +63,7 @@ class MediaWikiApi {
 		if ( reset( ( (array)$xml->createaccount[0]['status'][0] ) ) == "PASS" ){
 			return 1;
 		} else {
-			$this->last_error = ( (array)$xml->createaccount[0]['messagecode'][0] )[0];
+			$this->last_error = reset( (array)$xml->createaccount[0]['messagecode'][0] );
 			return 0;
 		}
 	}
