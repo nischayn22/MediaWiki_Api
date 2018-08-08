@@ -334,26 +334,27 @@ class MediaWikiApi {
         $editToken = $this->editToken;
         $site      = $this->siteUrl;
         $url  = $site . "/api.php?format=xml&action=edit&title=" . urlencode($pageName);
-		$url .= "&text=" . urlencode($content);
+		$params = array( "token" => urldecode( $editToken ), "assert" => "user" );
+		$params['text'] = urlencode($content);
         if ($createonly)
-            $url .= "&createonly=true";
+			$params['createonly'] = 'true';
         if ($prepend)
-            $url .= "&prependtext=" . urlencode($content);
+			$params['prependtext'] = urlencode($content);
         if ($append)
-            $url .= "&appendtext=" . urlencode($content);
+			$params['appendtext'] = urlencode($content);
         if ($summary) {
-            $url .= "&summary=" . urlencode($summary);
+			$params['summary'] = urlencode($summary);
 		}
         if ($sectiontitle) {
-            $url .= "&sectiontitle=" . urlencode($sectiontitle);
-            $url .= "&section=new";
+			$params['sectiontitle'] = urlencode($sectiontitle);
+			$params['section'] = 'new';
 		} else if ($section !== false) {
-            $url .= "&section=" . urlencode($section);
+			$params['section'] = urlencode($section);
 		}
         //UNCOMMENT TO DEBUG TO STDOUT
         //print($url);
 
-        $data = self::httpRequest($url, $params = "format=xml&action=edit&title=". urlencode($pageName) ."&token=$editToken&assert=user");
+        $data = self::httpRequest($url, $params);
 
 	//UNCOMMENT TO DEBUG TO STDOUT
 	//print($data);
@@ -363,7 +364,8 @@ class MediaWikiApi {
 		}
 
         $xml = simplexml_load_string($data);
-        $apiError = self::errorHandler($xml, $url . $params);
+
+        $apiError = self::errorHandler($xml, $url);
 		if ($apiError) {
 			return null;
 		}
