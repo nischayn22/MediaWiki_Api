@@ -335,21 +335,21 @@ class MediaWikiApi {
         $site      = $this->siteUrl;
         $url  = $site . "/api.php?format=xml&action=edit&title=" . urlencode($pageName);
 		$params = array( "token" => urldecode( $editToken ), "assert" => "user" );
-		$params['text'] = urlencode($content);
+		$params['text'] = $content;
         if ($createonly)
 			$params['createonly'] = 'true';
         if ($prepend)
-			$params['prependtext'] = urlencode($content);
+			$params['prependtext'] = $content;
         if ($append)
-			$params['appendtext'] = urlencode($content);
+			$params['appendtext'] = $content;
         if ($summary) {
-			$params['summary'] = urlencode($summary);
+			$params['summary'] = $summary;
 		}
         if ($sectiontitle) {
-			$params['sectiontitle'] = urlencode($sectiontitle);
+			$params['sectiontitle'] = $sectiontitle;
 			$params['section'] = 'new';
 		} else if ($section !== false) {
-			$params['section'] = urlencode($section);
+			$params['section'] = $section;
 		}
         //UNCOMMENT TO DEBUG TO STDOUT
         //print($url);
