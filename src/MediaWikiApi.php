@@ -956,7 +956,7 @@ class MediaWikiApi {
 			echo 'Caught exception: ', $e->getMessage(), "\n";
 			if (!$retry && $retryNumber < 3) {
 				echo "Retrying \n";
-				return httpRequest($url, $post, true, $retryNumber++);
+				return self::httpRequest($url, $post, true, $retryNumber++);
 			} else {
 				echo "Could not perform action after 3 attempts. Skipping now...\n";
 				return null;
