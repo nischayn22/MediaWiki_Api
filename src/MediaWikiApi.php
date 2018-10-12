@@ -320,6 +320,34 @@ class MediaWikiApi {
 		return $content;
 	}
 
+	function importComments( $pageName, $comments ) {
+        assert(!empty($pageName));
+        assert(!empty($comments));
+
+        if (empty($this->editToken))
+            $this->setEditToken();
+
+        $editToken = $this->editToken;
+        $site      = $this->siteUrl;
+        $url  = $site . "/api.php?format=xml&action=csImportComments&title=" . urlencode($pageName);
+		$params = array( "token" => urldecode( $editToken ) );
+		$params['comments'] = $comments;
+        $data = self::httpRequest($url, $params);
+
+		if ($data == null) {
+            return null;
+		}
+
+        $xml = simplexml_load_string($data);
+
+        $apiError = self::errorHandler($xml, $url);
+		if ($apiError) {
+			return null;
+		}
+
+        return 1;
+	}
+
     function editPage($pageName, $content, $createonly = false, $prepend = false, $append = false, $summary = false, $section = false, $sectiontitle = false, $retryNumber = 0) {
         assert(!empty($pageName));
         assert(!empty($content));
