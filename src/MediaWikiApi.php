@@ -320,7 +320,46 @@ class MediaWikiApi {
 		return $content;
 	}
 
-	function importComments( $pageName, $comments ) {
+	function importXML( $xml_contents ) {
+        if (empty($this->editToken))
+            $this->setEditToken();
+
+        $editToken = $this->editToken;
+        $site      = $this->siteUrl;
+        $url  = $site . "/api.php?format=xml&action=import";
+
+		$filename = "file.xml";
+		$fp = fopen(__DIR__ . '/' . $filename, "w");
+		fwrite($fp, $xml_contents);
+		fclose($fp);
+		$filepath = __DIR__ . '/' . $filename;
+
+		if (function_exists('curl_file_create')) { // php 5.5+
+		  $cFile = curl_file_create($filepath);
+		} else { // 
+		  $cFile = '@' . realpath($filepath);
+		}
+
+		$params = array( "token" => urldecode( $editToken ), "ignorewarnings" => 1, "filename" => urlencode($filename), "xml" => $cFile );
+        $data = self::httpRequest($url, $params, false, 0, "Content-Type: multipart/form-data");
+
+		if ($data == null) {
+            return null;
+		}
+
+        $xml = simplexml_load_string($data);
+
+        $apiError = self::errorHandler($xml, $url);
+		if ($apiError) {
+			return null;
+		}
+
+        return 1;
+	}
+
+	// Comments from the CommentStreams extension
+	// Actual comments must be imported using MediaWiki's Page Export feature
+	function importCommentsMetadata( $pageName, $comments ) {
         assert(!empty($pageName));
         assert(!empty($comments));
 
