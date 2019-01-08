@@ -255,6 +255,22 @@ class MediaWikiApi {
         return (string) $xml->query->pages->page->revisions->rev;
     }
 
+	function pageExists( $pageName ) {
+        $url    = $this->siteUrl . "/api.php?format=xml&action=query&formatversion=2&titles=$pageName";
+        $data   = self::httpRequest($url, $params = '');
+        $xml    = simplexml_load_string($data);
+        $expr   = "/api/query/pages";
+		$result = $xml->xpath($expr);
+		if ( empty( $result ) ) {
+			return false;
+		}
+		if ( property_exists( $result[0]->page->attributes(), 'missing' ) ) {
+			return false;
+		} else {
+			return true;
+		}
+	}
+
     function createPage($pageName, $content) {
         return $this->editPage($pageName, $content, true);
     }
@@ -387,7 +403,7 @@ class MediaWikiApi {
         return 1;
 	}
 
-    function editPage($pageName, $content, $createonly = false, $prepend = false, $append = false, $summary = false, $section = false, $sectiontitle = false, $retryNumber = 0) {
+    function editPage($pageName, $content, $createonly = false, $prepend = false, $append = false, $summary = false, $section = false, $sectiontitle = false) {
         assert(!empty($pageName));
         assert(!empty($content));
 
