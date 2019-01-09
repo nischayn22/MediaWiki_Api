@@ -256,6 +256,7 @@ class MediaWikiApi {
     }
 
 	function pageExists( $pageName ) {
+		$pageName = urlencode( $pageName );
         $url    = $this->siteUrl . "/api.php?format=xml&action=query&formatversion=2&titles=$pageName";
         $data   = self::httpRequest($url, $params = '');
         $xml    = simplexml_load_string($data);
