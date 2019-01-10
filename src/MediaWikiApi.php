@@ -357,7 +357,7 @@ class MediaWikiApi {
 		  $cFile = '@' . realpath($filepath);
 		}
 
-		$params = array( "token" => urldecode( $editToken ), "ignorewarnings" => 1, "filename" => urlencode($filename), "xml" => $cFile );
+		$params = array( "token" => urldecode( $editToken ), "ignorewarnings" => 1, "filename" => $filename, "xml" => $cFile );
         $data = self::httpRequest($url, $params, false, 0, "Content-Type: multipart/form-data");
 
 		if ($data == null) {
@@ -476,7 +476,7 @@ class MediaWikiApi {
 		  $cFile = '@' . realpath($filepath);
 		}
 
-		$params = array( "token" => urldecode( $editToken ), "ignorewarnings" => 1, "filename" => urlencode($filename), "file" => $cFile );
+		$params = array( "token" => urldecode( $editToken ), "ignorewarnings" => 1, "filename" => $filename, "file" => $cFile );
         $data = self::httpRequest($url, $params, false, 0, "Content-Type: multipart/form-data");
 		if ($data == null) {
             return null;
