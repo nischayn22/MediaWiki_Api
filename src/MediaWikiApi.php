@@ -6,7 +6,7 @@ ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
 global $settings;
-$settings['cookiefile'] = "cookies.tmp";
+$settings['cookiefile'] = tempnam(sys_get_temp_dir(), 'mw_api');
 
 use Google\Cloud\Translate\TranslateClient;
 use Exception;
