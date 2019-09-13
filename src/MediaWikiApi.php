@@ -60,10 +60,12 @@ class MediaWikiApi {
 		if ( $apiError ) {
 			return null;
 		}
-		if ( reset( ( (array)$xml->createaccount[0]['status'][0] ) ) == "PASS" ){
+		$status = (array)$xml->createaccount[0]['status'][0];
+		if ( reset( $status ) == "PASS" ){
 			return 1;
 		} else {
-			$this->last_error = reset( (array)$xml->createaccount[0]['messagecode'][0] );
+			$messagecode = (array)$xml->createaccount[0]['messagecode'][0];
+			$this->last_error = reset( $messagecode );
 			return 0;
 		}
 	}
